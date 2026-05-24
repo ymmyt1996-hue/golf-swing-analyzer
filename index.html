@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SWING AI - ゴルフスイング解析</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { min-height: 100vh; font-family: 'Noto Sans JP', sans-serif; background: radial-gradient(ellipse at 20% 50%, #0d2b0d, #0a0f0a 50%, #0a1a1a); color: #e8f0e8; overflow-x: hidden; }
+  body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(74,180,74,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(74,180,74,0.04) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; }
+  header { position: relative; z-index: 10; border-bottom: 1px solid rgba(74,180,74,0.15); background: rgba(10,15,10,0.85); backdrop-filter: blur(12px); padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
+  .logo-title { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 4px; color: #4ab44a; }
+  .logo-sub { font-size: 10px; color: #5a7a5a; letter-spacing: 2px; }
+  main { position: relative; z-index: 10; max-width: 600px; margin: 0 auto; padding: 32px 20px 80px; }
+  .headline { text-align: center; margin-bottom: 32px; }
+  h1 { font-family: 'Bebas Neue', sans-serif; font-size: 38px; line-height: 1.15; letter-spacing: 2px; background: linear-gradient(135deg, #7fff7f, #4ab44a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 12px; }
+  .subtext { font-size: 14px; color: #6a8a6a; line-height: 1.7; }
+  .free-badge { text-align: center; font-size: 11px; color: #4ab44a; margin-bottom: 16px; }
+  .upload-label { display: block; border: 2px dashed rgba(74,180,74,0.35); border-radius: 20px; padding: 48px 24px; text-align: center; cursor: pointer; background: rgba(74,180,74,0.03); transition: all 0.25s; margin-bottom: 20px; }
+  .upload-label:hover, .upload-label:active { border-color: #4ab44a; background: rgba(74,180,74,0.08); }
+  .upload-label input { display: none; }
+  .drop-icon { font-size: 48px; margin-bottom: 16px; }
+  .drop-title { font-size: 18px; font-weight: 700; color: #c8e8c8; margin-bottom: 8px; }
+  .drop-hint { font-size: 13px; color: #5a7a5a; margin-bottom: 12px; }
+  .drop-formats { display: inline-block; font-size: 11px; color: #4ab44a; background: rgba(74,180,74,0.1); padding: 4px 12px; border-radius: 20px; }
+  #preview-wrap { display: none; border-radius: 16px; overflow: hidden; border: 1px solid rgba(74,180,74,0.2); background: rgba(0,0,0,0.3); margin-bottom: 20px; }
+  #preview-wrap img, #preview-wrap video { width: 100%; max-height: 320px; object-fit: cover; display: block; }
+  .preview-info { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; }
+  .preview-name { font-size: 13px; color: #6a8a6a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
+  .remove-btn { background: rgba(255,80,80,0.15); border: 1px solid rgba(255,80,80,0.3); color: #ff8080; border-radius: 8px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
+  .error-box { display: none; background: rgba(255,80,80,0.1); border: 1px solid rgba(255,80,80,0.3); color: #ff9090; border-radius: 12px; padding: 12px 16px; font-size: 14px; margin-bottom: 16px; word-break: break-all; }
+  .analyze-btn { width: 100%; padding: 18px; background: linear-gradient(135deg, #2d7a2d, #4ab44a); border: none; border-radius: 16px; color: #fff; font-size: 18px; font-weight: 700; font-family: 'Noto Sans JP', sans-serif; cursor: pointer; letter-spacing: 1px; box-shadow: 0 8px 32px rgba(74,180,74,0.3); transition: all 0.2s; margin-bottom: 24px; }
+  .analyze-btn:disabled { background: rgba(74,180,74,0.15); box-shadow: none; cursor: not-allowed; color: #4a6a4a; }
+  .features { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .feature-chip { font-size: 12px; color: #4ab44a; background: rgba(74,180,74,0.08); border: 1px solid rgba(74,180,74,0.2); padding: 6px 14px; border-radius: 20px; }
+  #result-section { display: none; }
+  .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .result-title { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 3px; color: #4ab44a; }
+  .retry-btn { background: rgba(74,180,74,0.1); border: 1px solid rgba(74,180,74,0.3); color: #4ab44a; border-radius: 10px; padding: 8px 16px; font-size: 13px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
+  .score-card { background: rgba(74,180,74,0.06); border: 1px solid rgba(74,180,74,0.2); border-radius: 20px; padding: 28px 20px; margin-bottom: 16px; text-align: center; }
+  .score-number { font-family: 'Bebas Neue', sans-serif; font-size: 88px; line-height: 1; background: linear-gradient(135deg, #7fff7f, #4ab44a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .score-label { font-size: 16px; color: #6a8a6a; margin-top: 4px; margin-bottom: 12px; }
+  .score-bar-wrap { background: rgba(0,0,0,0.3); border-radius: 10px; height: 10px; overflow: hidden; margin: 0 auto 12px; max-width: 300px; }
+  .score-bar { height: 100%; border-radius: 10px; background: linear-gradient(90deg, #2d7a2d, #7fff7f); transition: width 1.2s ease; }
+  .score-comment { font-size: 14px; color: #a8c8a8; line-height: 1.7; }
+
+  /* Canvas overlay */
+  .canvas-wrap { position: relative; border-radius: 16px; overflow: hidden; border: 1px solid rgba(74,180,74,0.3); margin-bottom: 16px; background: #000; }
+  .canvas-wrap img { width: 100%; display: block; }
+  .canvas-wrap canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; padding: 0 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #a8c8a8; }
+  .legend-dot { width: 16px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+
+  .section-card { background: rgba(74,180,74,0.04); border: 1px solid rgba(74,180,74,0.15); border-radius: 20px; padding: 20px; margin-bottom: 16px; }
+  .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; color: #4ab44a; margin-bottom: 14px; }
+  .good-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+  .good-icon { color: #4ab44a; font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+  .good-text { font-size: 14px; color: #a8c8a8; line-height: 1.7; word-break: break-all; }
+  .improve-item { border: 1px solid rgba(74,180,74,0.15); border-radius: 14px; padding: 16px; margin-bottom: 12px; background: rgba(0,0,0,0.2); }
+  .improve-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .priority-badge { font-family: 'Bebas Neue', sans-serif; font-size: 13px; letter-spacing: 1px; padding: 3px 10px; border-radius: 20px; flex-shrink: 0; }
+  .priority-1 { background: rgba(255,100,100,0.2); color: #ff8080; border: 1px solid rgba(255,100,100,0.3); }
+  .priority-2 { background: rgba(255,180,50,0.15); color: #ffb832; border: 1px solid rgba(255,180,50,0.3); }
+  .priority-3 { background: rgba(74,180,74,0.15); color: #4ab44a; border: 1px solid rgba(74,180,74,0.3); }
+  .improve-title { font-size: 15px; font-weight: 700; color: #c8e8c8; word-break: break-all; }
+  .improve-desc { font-size: 14px; color: #a8c8a8; line-height: 1.7; margin-bottom: 10px; word-break: break-all; }
+  .drill-box { background: rgba(74,180,74,0.08); border-left: 3px solid #4ab44a; border-radius: 0 8px 8px 0; padding: 10px 12px; margin-bottom: 12px; }
+  .drill-label { font-size: 11px; color: #4ab44a; letter-spacing: 1px; margin-bottom: 4px; }
+  .drill-text { font-size: 13px; color: #a8c8a8; line-height: 1.6; word-break: break-all; }
+  .yt-btn { display: flex; align-items: center; gap: 8px; background: rgba(255,0,0,0.12); border: 1px solid rgba(255,0,0,0.25); color: #ff8080; border-radius: 10px; padding: 8px 14px; font-size: 13px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; text-decoration: none; width: 100%; justify-content: center; }
+  .coach-card { background: linear-gradient(135deg, rgba(74,180,74,0.08), rgba(0,100,0,0.1)); border: 1px solid rgba(74,180,74,0.25); border-radius: 20px; padding: 20px; margin-bottom: 24px; text-align: center; }
+  .coach-icon { font-size: 32px; margin-bottom: 8px; }
+  .coach-text { font-size: 15px; color: #c8e8c8; line-height: 1.8; word-break: break-all; }
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 10px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <span style="font-size:28px">⛳</span>
+  <div>
+    <div class="logo-title">SWING AI</div>
+    <div class="logo-sub">Golf Swing Analyzer</div>
+  </div>
+</header>
+<main>
+  <div id="upload-section">
+    <div class="headline">
+      <h1>あなたのスイングを<br>AIが解析します</h1>
+      <p class="subtext">動画または画像をアップロードするだけで<br>骨格・軌道を可視化してアドバイス</p>
+    </div>
+    <div class="free-badge">✨ 完全無料・登録不要・逆光でもOK</div>
+    <label class="upload-label">
+      <input type="file" id="file-input" accept="image/*,video/*">
+      <div class="drop-icon">📱</div>
+      <p class="drop-title">タップして動画・画像を選択</p>
+      <p class="drop-hint">逆光・暗い環境でも解析できます</p>
+      <span class="drop-formats">MP4 / MOV / JPG / PNG 対応</span>
+    </label>
+    <div id="preview-wrap">
+      <div id="preview-media"></div>
+      <div class="preview-info">
+        <span class="preview-name" id="preview-name"></span>
+        <button class="remove-btn" onclick="resetFile()">✕ 削除</button>
+      </div>
+    </div>
+    <div class="error-box" id="error-box"></div>
+    <button class="analyze-btn" id="analyze-btn" disabled onclick="analyze()">🏌️ スイングを解析する</button>
+    <div class="features">
+      <span class="feature-chip">🦴 骨格検出</span>
+      <span class="feature-chip">🏹 軌道描画</span>
+      <span class="feature-chip">💯 100点採点</span>
+      <span class="feature-chip">🎬 練習動画付き</span>
+    </div>
+  </div>
+
+  <div id="result-section">
+    <div class="result-header">
+      <h2 class="result-title">解析結果</h2>
+      <button class="retry-btn" onclick="resetAll()">🔄 もう一度</button>
+    </div>
+
+    <!-- Score -->
+    <div class="score-card">
+      <div class="score-number" id="score-number">--</div>
+      <div class="score-label">/ 100点</div>
+      <div class="score-bar-wrap"><div class="score-bar" id="score-bar" style="width:0%"></div></div>
+      <div class="score-comment" id="score-comment"></div>
+    </div>
+
+    <!-- Annotated image -->
+    <div class="canvas-wrap" id="canvas-wrap">
+      <img id="result-img" src="" alt="スイング">
+      <canvas id="overlay-canvas"></canvas>
+    </div>
+    <div class="legend" id="legend"></div>
+
+    <!-- Good points -->
+    <div class="section-card">
+      <div class="section-title">👍 良い点</div>
+      <div id="good-points"></div>
+    </div>
+
+    <!-- Improvements -->
+    <div class="section-card">
+      <div class="section-title">🎯 改善ポイント</div>
+      <div id="improvements"></div>
+    </div>
+
+    <!-- Coach -->
+    <div class="coach-card">
+      <div class="coach-icon">🏌️</div>
+      <div class="coach-text" id="coach-message"></div>
+    </div>
+
+    <button class="analyze-btn" onclick="resetAll()">🏌️ 別のスイングを解析</button>
+  </div>
+</main>
+
+<script>
+let currentFile = null;
+let previewObjectUrl = null;
+let capturedFrameUrl = null;
+
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) handleFile(file);
+});
+
+function handleFile(file) {
+  const isImage = file.type.startsWith('image/');
+  const isVideo = file.type.startsWith('video/');
+  if (!isImage && !isVideo) { showError('画像または動画ファイルを選択してください'); return; }
+  currentFile = file;
+  hideError();
+  if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+  previewObjectUrl = URL.createObjectURL(file);
+  const mediaDiv = document.getElementById('preview-media');
+  mediaDiv.innerHTML = isVideo
+    ? `<video src="${previewObjectUrl}" controls playsinline style="width:100%;max-height:320px;object-fit:cover;display:block"></video>`
+    : `<img src="${previewObjectUrl}" alt="スイング" style="width:100%;max-height:320px;object-fit:cover;display:block">`;
+  document.getElementById('preview-name').textContent = file.name;
+  document.getElementById('preview-wrap').style.display = 'block';
+  document.getElementById('analyze-btn').disabled = false;
+}
+
+function resetFile() {
+  currentFile = null;
+  capturedFrameUrl = null;
+  if (previewObjectUrl) { URL.revokeObjectURL(previewObjectUrl); previewObjectUrl = null; }
+  document.getElementById('preview-wrap').style.display = 'none';
+  document.getElementById('preview-media').innerHTML = '';
+  document.getElementById('file-input').value = '';
+  document.getElementById('analyze-btn').disabled = true;
+  hideError();
+}
+
+function resetAll() {
+  resetFile();
+  document.getElementById('upload-section').style.display = 'block';
+  document.getElementById('result-section').style.display = 'none';
+}
+
+async function analyze() {
+  if (!currentFile) return;
+  const btn = document.getElementById('analyze-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>AIが解析中...';
+  hideError();
+
+  let fileToSend = currentFile;
+  capturedFrameUrl = previewObjectUrl;
+
+  if (currentFile.type.startsWith('video/')) {
+    try {
+      const { file: frameFile, url: frameUrl } = await extractVideoFrame(currentFile);
+      fileToSend = frameFile;
+      capturedFrameUrl = frameUrl;
+    } catch(e) {}
+  }
+
+  const formData = new FormData();
+  formData.append('file', fileToSend);
+
+  try {
+    const res = await fetch('/api/analyze', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '解析に失敗しました');
+
+    document.getElementById('upload-section').style.display = 'none';
+    document.getElementById('result-section').style.display = 'block';
+    renderResult(data.result);
+  } catch (err) {
+    showError(err.message);
+    btn.disabled = false;
+    btn.innerHTML = '🏌️ スイングを解析する';
+  }
+}
+
+function renderResult(r) {
+  // Score
+  const score = r.score || 0;
+  document.getElementById('score-number').textContent = score;
+  document.getElementById('score-comment').textContent = r.score_comment || '';
+  setTimeout(() => { document.getElementById('score-bar').style.width = score + '%'; }, 100);
+
+  // Annotated image
+  const img = document.getElementById('result-img');
+  img.src = capturedFrameUrl || '';
+  img.onload = () => drawAnnotations(r.pose, r.annotations);
+
+  // Good points
+  document.getElementById('good-points').innerHTML = (r.good_points || []).map(g =>
+    `<div class="good-item"><span class="good-icon">✓</span><span class="good-text">${g}</span></div>`
+  ).join('');
+
+  // Improvements
+  const priorityLabels = ['最優先', '次に重要', '余裕があれば'];
+  document.getElementById('improvements').innerHTML = (r.improvements || []).map((imp, i) => {
+    const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(imp.youtube_search || 'golf swing drill')}`;
+    return `
+      <div class="improve-item">
+        <div class="improve-header">
+          <span class="priority-badge priority-${imp.priority || i+1}">${priorityLabels[i] || '改善点'}</span>
+          <span class="improve-title">${imp.title || ''}</span>
+        </div>
+        <div class="improve-desc">${imp.description || ''}</div>
+        <div class="drill-box">
+          <div class="drill-label">📌 練習ドリル</div>
+          <div class="drill-text">${imp.drill || ''}</div>
+        </div>
+        <a class="yt-btn" href="${ytUrl}" target="_blank" rel="noopener">▶ YouTubeで練習動画を見る</a>
+      </div>`;
+  }).join('');
+
+  // Coach
+  document.getElementById('coach-message').textContent = r.coach_message || '';
+}
+
+function drawAnnotations(pose, annotations) {
+  const img = document.getElementById('result-img');
+  const canvas = document.getElementById('overlay-canvas');
+  const wrap = document.getElementById('canvas-wrap');
+
+  const W = img.naturalWidth || img.width;
+  const H = img.naturalHeight || img.height;
+  const dispW = img.offsetWidth;
+  const dispH = img.offsetHeight;
+
+  canvas.width = dispW;
+  canvas.height = dispH;
+
+  const sx = dispW / 1000;
+  const sy = dispH / 1000;
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, dispW, dispH);
+
+  if (!pose) return;
+
+  // 骨格の接続定義
+  const skeleton = [
+    ['head', 'left_shoulder'], ['head', 'right_shoulder'],
+    ['left_shoulder', 'right_shoulder'],
+    ['left_shoulder', 'left_hip'], ['right_shoulder', 'right_hip'],
+    ['left_hip', 'right_hip'],
+    ['left_hip', 'left_knee'], ['right_hip', 'right_knee'],
+    ['left_knee', 'left_foot'], ['right_knee', 'right_foot'],
+    ['left_hand', 'left_shoulder'], ['right_hand', 'right_shoulder'],
+    ['club_grip', 'club_head']
+  ];
+
+  // 骨格を描画
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([]);
+  skeleton.forEach(([a, b]) => {
+    const pa = pose[a], pb = pose[b];
+    if (!pa || !pb) return;
+    const isClub = a === 'club_grip' || b === 'club_head';
+    ctx.strokeStyle = isClub ? '#ff4444' : 'rgba(0,255,136,0.7)';
+    ctx.lineWidth = isClub ? 3 : 2;
+    ctx.beginPath();
+    ctx.moveTo(pa.x * sx, pa.y * sy);
+    ctx.lineTo(pb.x * sx, pb.y * sy);
+    ctx.stroke();
+  });
+
+  // アノテーションライン
+  if (annotations) {
+    annotations.forEach(ann => {
+      if (ann.type === 'line' && pose[ann.from] && pose[ann.to]) {
+        const pa = pose[ann.from], pb = pose[ann.to];
+        ctx.strokeStyle = ann.color || '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(pa.x * sx, pa.y * sy);
+        ctx.lineTo(pb.x * sx, pb.y * sy);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // ラベル
+        if (ann.label) {
+          const mx = ((pa.x + pb.x) / 2) * sx;
+          const my = ((pa.y + pb.y) / 2) * sy;
+          ctx.font = 'bold 11px Noto Sans JP, sans-serif';
+          ctx.fillStyle = ann.color || '#ffffff';
+          ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+          ctx.lineWidth = 3;
+          ctx.strokeText(ann.label, mx + 4, my - 4);
+          ctx.fillText(ann.label, mx + 4, my - 4);
+        }
+      }
+    });
+  }
+
+  // 関節点を描画
+  Object.entries(pose).forEach(([key, pt]) => {
+    if (!pt) return;
+    const isClub = key.includes('club');
+    const r = isClub ? 6 : 5;
+    const color = isClub ? '#ff4444' : '#00ff88';
+    ctx.beginPath();
+    ctx.arc(pt.x * sx, pt.y * sy, r, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+
+  // 凡例
+  const legendEl = document.getElementById('legend');
+  legendEl.innerHTML = `
+    <div class="legend-item"><div class="legend-dot" style="background:#00ff88"></div>骨格ライン</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ff4444"></div>クラブ軌道</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#00ff88;border-radius:50%;width:8px;height:8px"></div>関節点</div>
+  `;
+  if (annotations) {
+    annotations.forEach(ann => {
+      legendEl.innerHTML += `<div class="legend-item"><div class="legend-dot" style="background:${ann.color};border-top:2px dashed ${ann.color};background:transparent"></div>${ann.label}</div>`;
+    });
+  }
+}
+
+function extractVideoFrame(videoFile) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    const url = URL.createObjectURL(videoFile);
+    video.src = url; video.muted = true;
+    video.addEventListener('loadeddata', () => { video.currentTime = Math.min(1.5, video.duration * 0.3); });
+    video.addEventListener('seeked', () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640; canvas.height = video.videoHeight || 360;
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      const frameUrl = canvas.toDataURL('image/jpeg', 0.9);
+      canvas.toBlob(blob => {
+        resolve({ file: new File([blob], 'frame.jpg', { type: 'image/jpeg' }), url: frameUrl });
+      }, 'image/jpeg', 0.9);
+    });
+    video.addEventListener('error', () => { URL.revokeObjectURL(url); reject(); });
+    video.load();
+  });
+}
+
+function showError(msg) { const el = document.getElementById('error-box'); el.textContent = '⚠️ ' + msg; el.style.display = 'block'; }
+function hideError() { document.getElementById('error-box').style.display = 'none'; }
+</script>
+</body>
+</html>

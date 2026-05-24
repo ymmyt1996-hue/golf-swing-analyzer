@@ -3,126 +3,151 @@ import fs from 'fs';
 
 export const config = { api: { bodyParser: false } };
 
-// メモリ上のレート制限（Vercelはサーバーレスなので簡易版）
 const rateLimitMap = new Map();
-const RATE_LIMIT = 5;      // 最大リクエスト数
-const WINDOW_MS = 60000;   // 1分間
+const RATE_LIMIT = 5;
+const WINDOW_MS = 60000;
 
 function isRateLimited(ip) {
   const now = Date.now();
     const record = rateLimitMap.get(ip) || { count: 0, start: now };
+      if (now - record.start > WINDOW_MS) {
+          rateLimitMap.set(ip, { count: 1, start: now });
+              return false;
+                }
+                  if (record.count >= RATE_LIMIT) return true;
+                    record.count++;
+                      rateLimitMap.set(ip, record);
+                        return false;
+                        }
 
-      // ウィンドウがリセットされる場合
-        if (now - record.start > WINDOW_MS) {
-            rateLimitMap.set(ip, { count: 1, start: now });
-                return false;
-                  }
+                        const ALLOWED_MIME_TYPES = [
+                          'image/jpeg','image/png','image/webp','image/gif',
+                            'video/mp4','video/quicktime','video/webm'
+                            ];
+                            const MAX_FILE_SIZE = 15 * 1024 * 1024;
 
-                    if (record.count >= RATE_LIMIT) return true;
+                            const SYSTEM_PROMPT = `あなたはプロのゴルフコーチです。ゴルフスイングの画像を分析し、以下のJSON形式のみで回答してください。
 
-                      record.count++;
-                        rateLimitMap.set(ip, record);
-                          return false;
-                          }
+                            【重要】逆光・暗い・シルエットのみでも必ず分析してください。見えている輪郭・影・シルエットから体の軸・膝・腕・クラブの位置を推定してください。
 
-                          const ALLOWED_MIME_TYPES = [
-                            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
-                              'video/mp4', 'video/quicktime', 'video/webm'
-                              ];
-                              const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
+                            画像サイズを1000x1000として、以下の座標を0〜1000の範囲で推定してください：
+                            - head: 頭の位置
+                            - left_shoulder / right_shoulder: 両肩
+                            - left_hip / right_hip: 両腰
+                            - left_knee / right_knee: 両膝
+                            - left_foot / right_foot: 両足
+                            - left_hand / right_hand: 両手
+                            - club_grip: グリップ位置
+                            - club_head: クラブヘッド位置
 
-                              const SYSTEM_PROMPT = `あなたはプロのゴルフコーチです。アップロードされたゴルフスイングの画像を分析し、日本語で具体的なアドバイスを提供してください。
+                            以下のJSON形式のみで回答（前後に余分なテキスト不要）：
 
-                              画像が逆光・不鮮明・一部しか見えない場合でも、見えている情報を最大限活用して必ず全項目を回答してください。
+                            {
+                              "score": 75,
+                                "score_comment": "スコアの理由を1文で",
+                                  "pose": {
+                                      "head": {"x": 500, "y": 100},
+                                          "left_shoulder": {"x": 450, "y": 250},
+                                              "right_shoulder": {"x": 550, "y": 250},
+                                                  "left_hip": {"x": 460, "y": 450},
+                                                      "right_hip": {"x": 540, "y": 450},
+                                                          "left_knee": {"x": 440, "y": 650},
+                                                              "right_knee": {"x": 560, "y": 650},
+                                                                  "left_foot": {"x": 420, "y": 850},
+                                                                      "right_foot": {"x": 580, "y": 850},
+                                                                          "left_hand": {"x": 480, "y": 400},
+                                                                              "right_hand": {"x": 520, "y": 400},
+                                                                                  "club_grip": {"x": 500, "y": 380},
+                                                                                      "club_head": {"x": 300, "y": 700}
+                                                                                        },
+                                                                                          "annotations": [
+                                                                                              {"type": "line", "from": "left_shoulder", "to": "right_shoulder", "color": "#00ff88", "label": "肩のライン"},
+                                                                                                  {"type": "line", "from": "left_hip", "to": "right_hip", "color": "#ffaa00", "label": "腰のライン"},
+                                                                                                      {"type": "line", "from": "club_grip", "to": "club_head", "color": "#ff4444", "label": "クラブ軌道"},
+                                                                                                          {"type": "line", "from": "head", "to": "left_foot", "color": "#4488ff", "label": "体の軸"}
+                                                                                                            ],
+                                                                                                              "good_points": [
+                                                                                                                  "良い点1",
+                                                                                                                      "良い点2",
+                                                                                                                          "良い点3"
+                                                                                                                            ],
+                                                                                                                              "improvements": [
+                                                                                                                                  {
+                                                                                                                                        "priority": 1,
+                                                                                                                                              "title": "改善点タイトル",
+                                                                                                                                                    "description": "詳細説明",
+                                                                                                                                                          "drill": "練習ドリル",
+                                                                                                                                                                "youtube_search": "golf swing drill english keywords"
+                                                                                                                                                                    },
+                                                                                                                                                                        {
+                                                                                                                                                                              "priority": 2,
+                                                                                                                                                                                    "title": "改善点タイトル",
+                                                                                                                                                                                          "description": "詳細説明",
+                                                                                                                                                                                                "drill": "練習ドリル",
+                                                                                                                                                                                                      "youtube_search": "golf swing drill english keywords"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                              {
+                                                                                                                                                                                                                    "priority": 3,
+                                                                                                                                                                                                                          "title": "改善点タイトル",
+                                                                                                                                                                                                                                "description": "詳細説明",
+                                                                                                                                                                                                                                      "drill": "練習ドリル",
+                                                                                                                                                                                                                                            "youtube_search": "golf swing drill english keywords"
+                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                  ],
+                                                                                                                                                                                                                                                    "coach_message": "励ましメッセージ"
+                                                                                                                                                                                                                                                    }`;
 
-                              分析項目（全て必ず回答）：
-                              1. アドレス（構え）: グリップ、スタンス幅、ボール位置、姿勢
-                              2. バックスイング: テイクバック、肩の回転、腕の動き
-                              3. トップ: クラブの位置、左腕の伸び、体の捻転
-                              4. ダウンスイング〜インパクト: 切り返し、体重移動、フェース角度
-                              5. フォロースルー: 腕の伸び、フィニッシュの形
+                                                                                                                                                                                                                                                    export default async function handler(req, res) {
+                                                                                                                                                                                                                                                      if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-                              出力形式（必ずこの形式で全て出力）：
-                              ## 総合評価
-                              ★★★★☆ （理由を1文で）
+                                                                                                                                                                                                                                                        const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+                                                                                                                                                                                                                                                          if (isRateLimited(ip)) return res.status(429).json({ error: '1分間のリクエスト上限（5回）に達しました。' });
 
-                              ## 良い点
-                              - 良い点1
-                              - 良い点2
-                              - 良い点3
+                                                                                                                                                                                                                                                            const form = new IncomingForm({ maxFileSize: MAX_FILE_SIZE });
 
-                              ## 改善ポイント
-                              1. 【最優先】改善点の説明
-                                 📌 練習ドリル: 具体的な練習方法
-                                 2. 【次に重要】改善点の説明
-                                    📌 練習ドリル: 具体的な練習方法
-                                    3. 改善点の説明
-                                       📌 練習ドリル: 具体的な練習方法
+                                                                                                                                                                                                                                                              form.parse(req, async (err, fields, files) => {
+                                                                                                                                                                                                                                                                  if (err) return res.status(400).json({ error: 'ファイルの読み込みに失敗しました' });
 
-                                       ## コーチからひと言
-                                       励ましのメッセージ`;
+                                                                                                                                                                                                                                                                      const file = Array.isArray(files.file) ? files.file[0] : files.file;
+                                                                                                                                                                                                                                                                          if (!file) return res.status(400).json({ error: 'ファイルが見つかりません' });
 
-                                       export default async function handler(req, res) {
-                                         if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+                                                                                                                                                                                                                                                                              const mimeType = file.mimetype || '';
+                                                                                                                                                                                                                                                                                  if (!ALLOWED_MIME_TYPES.includes(mimeType)) return res.status(400).json({ error: '対応していないファイル形式です' });
 
-                                           // IPアドレス取得
-                                             const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+                                                                                                                                                                                                                                                                                      try {
+                                                                                                                                                                                                                                                                                            const imageData = fs.readFileSync(file.filepath);
+                                                                                                                                                                                                                                                                                                  const base64 = imageData.toString('base64');
+                                                                                                                                                                                                                                                                                                        const imageMime = mimeType.startsWith('video/') ? 'image/jpeg' : mimeType;
 
-                                               // レート制限チェック
-                                                 if (isRateLimited(ip)) {
-                                                     return res.status(429).json({ error: '1分間のリクエスト上限（5回）に達しました。しばらくお待ちください。' });
-                                                       }
+                                                                                                                                                                                                                                                                                                              const apiKey = process.env.GEMINI_API_KEY;
+                                                                                                                                                                                                                                                                                                                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
-                                                         const form = new IncomingForm({ maxFileSize: MAX_FILE_SIZE });
+                                                                                                                                                                                                                                                                                                                          const response = await fetch(url, {
+                                                                                                                                                                                                                                                                                                                                  method: 'POST',
+                                                                                                                                                                                                                                                                                                                                          headers: { 'Content-Type': 'application/json' },
+                                                                                                                                                                                                                                                                                                                                                  body: JSON.stringify({
+                                                                                                                                                                                                                                                                                                                                                            contents: [{ parts: [
+                                                                                                                                                                                                                                                                                                                                                                        { text: SYSTEM_PROMPT },
+                                                                                                                                                                                                                                                                                                                                                                                    { inline_data: { mime_type: imageMime, data: base64 } }
+                                                                                                                                                                                                                                                                                                                                                                                              ]}],
+                                                                                                                                                                                                                                                                                                                                                                                                        generationConfig: { maxOutputTokens: 2500, temperature: 0.3 }
+                                                                                                                                                                                                                                                                                                                                                                                                                })
+                                                                                                                                                                                                                                                                                                                                                                                                                      });
 
-                                                           form.parse(req, async (err, fields, files) => {
-                                                               if (err) {
-                                                                     if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'ファイルサイズは15MB以下にしてください' });
-                                                                           return res.status(400).json({ error: 'ファイルの読み込みに失敗しました' });
-                                                                               }
+                                                                                                                                                                                                                                                                                                                                                                                                                            const data = await response.json();
+                                                                                                                                                                                                                                                                                                                                                                                                                                  if (!response.ok) throw new Error(data.error?.message || '解析に失敗しました');
 
-                                                                                   const file = Array.isArray(files.file) ? files.file[0] : files.file;
-                                                                                       if (!file) return res.status(400).json({ error: 'ファイルが見つかりません' });
-
-                                                                                           // ファイル形式チェック
-                                                                                               const mimeType = file.mimetype || '';
-                                                                                                   if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
-                                                                                                         return res.status(400).json({ error: '対応していないファイル形式です。JPG/PNG/MP4/MOVを使用してください。' });
-                                                                                                             }
-
-                                                                                                                 try {
-                                                                                                                       const imageData = fs.readFileSync(file.filepath);
-                                                                                                                             const base64 = imageData.toString('base64');
-
-                                                                                                                                   const apiKey = process.env.GEMINI_API_KEY;
-                                                                                                                                         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-
-                                                                                                                                               const response = await fetch(url, {
-                                                                                                                                                       method: 'POST',
-                                                                                                                                                               headers: { 'Content-Type': 'application/json' },
-                                                                                                                                                                       body: JSON.stringify({
-                                                                                                                                                                                 contents: [{
-                                                                                                                                                                                             parts: [
-                                                                                                                                                                                                           { text: SYSTEM_PROMPT },
-                                                                                                                                                                                                                         { inline_data: { mime_type: mimeType.startsWith('video/') ? 'image/jpeg' : mimeType, data: base64 } }
-                                                                                                                                                                                                                                     ]
-                                                                                                                                                                                                                                               }],
-                                                                                                                                                                                                                                                         generationConfig: { maxOutputTokens: 2000, temperature: 0.4 }
-                                                                                                                                                                                                                                                                 })
-                                                                                                                                                                                                                                                                       });
-
-                                                                                                                                                                                                                                                                             const data = await response.json();
-                                                                                                                                                                                                                                                                                   if (!response.ok) throw new Error(data.error?.message || '解析に失敗しました');
-
-                                                                                                                                                                                                                                                                                         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '解析結果を取得できませんでした';
-                                                                                                                                                                                                                                                                                               res.json({ result: text });
-                                                                                                                                                                                                                                                                                                   } catch (e) {
-                                                                                                                                                                                                                                                                                                         console.error(e);
-                                                                                                                                                                                                                                                                                                               res.status(500).json({ error: e.message });
-                                                                                                                                                                                                                                                                                                                   } finally {
-                                                                                                                                                                                                                                                                                                                         // 一時ファイルを削除
-                                                                                                                                                                                                                                                                                                                               try { fs.unlinkSync(file.filepath); } catch {}
-                                                                                                                                                                                                                                                                                                                                   }
-                                                                                                                                                                                                                                                                                                                                     });
-                                                                                                                                                                                                                                                                                                                                     }
-                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                                                                                                                                                                                                                                                                                                                                                                                                                                              const jsonMatch = text.match(/\{[\s\S]*\}/);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    if (!jsonMatch) throw new Error('解析結果のフォーマットエラー');
+                                                                                                                                                                                                                                                                                                                                                                                                                                                          const result = JSON.parse(jsonMatch[0]);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                res.json({ result });
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    } catch (e) {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          console.error(e);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                res.status(500).json({ error: e.message });
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    } finally {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          try { fs.unlinkSync(file.filepath); } catch {}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                });
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
