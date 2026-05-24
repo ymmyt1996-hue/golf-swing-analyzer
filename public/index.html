@@ -300,6 +300,12 @@ function drawAnnotations(pose, annotations) {
 
   if (!pose) return;
 
+  // 座標をCanvas内に収める関数
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+  function px(pt) {
+    return { x: clamp(pt.x * sx, 0, dispW), y: clamp(pt.y * sy, 0, dispH) };
+  }
+
   // 骨格の接続定義
   const skeleton = [
     ['head', 'left_shoulder'], ['head', 'right_shoulder'],
@@ -322,8 +328,9 @@ function drawAnnotations(pose, annotations) {
     ctx.strokeStyle = isClub ? '#ff4444' : 'rgba(0,255,136,0.7)';
     ctx.lineWidth = isClub ? 3 : 2;
     ctx.beginPath();
-    ctx.moveTo(pa.x * sx, pa.y * sy);
-    ctx.lineTo(pb.x * sx, pb.y * sy);
+    const ppa = px(pa), ppb = px(pb);
+    ctx.moveTo(ppa.x, ppa.y);
+    ctx.lineTo(ppb.x, ppb.y);
     ctx.stroke();
   });
 
@@ -331,20 +338,20 @@ function drawAnnotations(pose, annotations) {
   if (annotations) {
     annotations.forEach(ann => {
       if (ann.type === 'line' && pose[ann.from] && pose[ann.to]) {
-        const pa = pose[ann.from], pb = pose[ann.to];
+        const pa = px(pose[ann.from]), pb = px(pose[ann.to]);
         ctx.strokeStyle = ann.color || '#ffffff';
         ctx.lineWidth = 2;
         ctx.setLineDash([6, 4]);
         ctx.beginPath();
-        ctx.moveTo(pa.x * sx, pa.y * sy);
-        ctx.lineTo(pb.x * sx, pb.y * sy);
+        ctx.moveTo(pa.x, pa.y);
+        ctx.lineTo(pb.x, pb.y);
         ctx.stroke();
         ctx.setLineDash([]);
 
         // ラベル
         if (ann.label) {
-          const mx = ((pa.x + pb.x) / 2) * sx;
-          const my = ((pa.y + pb.y) / 2) * sy;
+          const mx = (pa.x + pb.x) / 2;
+          const my = (pa.y + pb.y) / 2;
           ctx.font = 'bold 11px Noto Sans JP, sans-serif';
           ctx.fillStyle = ann.color || '#ffffff';
           ctx.strokeStyle = 'rgba(0,0,0,0.8)';
@@ -363,7 +370,7 @@ function drawAnnotations(pose, annotations) {
     const r = isClub ? 6 : 5;
     const color = isClub ? '#ff4444' : '#00ff88';
     ctx.beginPath();
-    ctx.arc(pt.x * sx, pt.y * sy, r, 0, Math.PI * 2);
+    const ppt = px(pt); ctx.arc(ppt.x, ppt.y, r, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.fill();
     ctx.strokeStyle = 'rgba(0,0,0,0.6)';
