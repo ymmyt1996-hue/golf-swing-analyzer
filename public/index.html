@@ -1,420 +1,501 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SWING AI - ゴルフスイング解析</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { min-height: 100vh; font-family: 'Noto Sans JP', sans-serif; background: radial-gradient(ellipse at 20% 50%, #0d2b0d, #0a0f0a 50%, #0a1a1a); color: #e8f0e8; overflow-x: hidden; }
-  body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(74,180,74,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(74,180,74,0.04) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; }
-  header { position: relative; z-index: 10; border-bottom: 1px solid rgba(74,180,74,0.15); background: rgba(10,15,10,0.85); backdrop-filter: blur(12px); padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
-  .logo-title { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 4px; color: #4ab44a; }
-  .logo-sub { font-size: 10px; color: #5a7a5a; letter-spacing: 2px; }
-  main { position: relative; z-index: 10; max-width: 600px; margin: 0 auto; padding: 32px 20px 80px; }
-  .headline { text-align: center; margin-bottom: 32px; }
-  h1 { font-family: 'Bebas Neue', sans-serif; font-size: 38px; line-height: 1.15; letter-spacing: 2px; background: linear-gradient(135deg, #7fff7f, #4ab44a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 12px; }
-  .subtext { font-size: 14px; color: #6a8a6a; line-height: 1.7; }
-  .free-badge { text-align: center; font-size: 11px; color: #4ab44a; margin-bottom: 16px; }
-  .upload-label { display: block; border: 2px dashed rgba(74,180,74,0.35); border-radius: 20px; padding: 48px 24px; text-align: center; cursor: pointer; background: rgba(74,180,74,0.03); transition: all 0.25s; margin-bottom: 20px; }
-  .upload-label:hover, .upload-label:active { border-color: #4ab44a; background: rgba(74,180,74,0.08); }
-  .upload-label input { display: none; }
-  .drop-icon { font-size: 48px; margin-bottom: 16px; }
-  .drop-title { font-size: 18px; font-weight: 700; color: #c8e8c8; margin-bottom: 8px; }
-  .drop-hint { font-size: 13px; color: #5a7a5a; margin-bottom: 12px; }
-  .drop-formats { display: inline-block; font-size: 11px; color: #4ab44a; background: rgba(74,180,74,0.1); padding: 4px 12px; border-radius: 20px; }
-  #preview-wrap { display: none; border-radius: 16px; overflow: hidden; border: 1px solid rgba(74,180,74,0.2); background: rgba(0,0,0,0.3); margin-bottom: 20px; }
-  #preview-wrap img, #preview-wrap video { width: 100%; max-height: 320px; object-fit: cover; display: block; }
-  .preview-info { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; }
-  .preview-name { font-size: 13px; color: #6a8a6a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
-  .remove-btn { background: rgba(255,80,80,0.15); border: 1px solid rgba(255,80,80,0.3); color: #ff8080; border-radius: 8px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
-  .error-box { display: none; background: rgba(255,80,80,0.1); border: 1px solid rgba(255,80,80,0.3); color: #ff9090; border-radius: 12px; padding: 12px 16px; font-size: 14px; margin-bottom: 16px; word-break: break-all; }
-  .analyze-btn { width: 100%; padding: 18px; background: linear-gradient(135deg, #2d7a2d, #4ab44a); border: none; border-radius: 16px; color: #fff; font-size: 18px; font-weight: 700; font-family: 'Noto Sans JP', sans-serif; cursor: pointer; letter-spacing: 1px; box-shadow: 0 8px 32px rgba(74,180,74,0.3); transition: all 0.2s; margin-bottom: 24px; }
-  .analyze-btn:disabled { background: rgba(74,180,74,0.15); box-shadow: none; cursor: not-allowed; color: #4a6a4a; }
-  .features { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-  .feature-chip { font-size: 12px; color: #4ab44a; background: rgba(74,180,74,0.08); border: 1px solid rgba(74,180,74,0.2); padding: 6px 14px; border-radius: 20px; }
-  #result-section { display: none; }
-  .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-  .result-title { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 3px; color: #4ab44a; }
-  .retry-btn { background: rgba(74,180,74,0.1); border: 1px solid rgba(74,180,74,0.3); color: #4ab44a; border-radius: 10px; padding: 8px 16px; font-size: 13px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
-  .score-card { background: rgba(74,180,74,0.06); border: 1px solid rgba(74,180,74,0.2); border-radius: 20px; padding: 28px 20px; margin-bottom: 16px; text-align: center; }
-  .score-number { font-family: 'Bebas Neue', sans-serif; font-size: 88px; line-height: 1; background: linear-gradient(135deg, #7fff7f, #4ab44a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .score-label { font-size: 16px; color: #6a8a6a; margin-top: 4px; margin-bottom: 12px; }
-  .score-bar-wrap { background: rgba(0,0,0,0.3); border-radius: 10px; height: 10px; overflow: hidden; margin: 0 auto 12px; max-width: 300px; }
-  .score-bar { height: 100%; border-radius: 10px; background: linear-gradient(90deg, #2d7a2d, #7fff7f); transition: width 1.2s ease; }
-  .score-comment { font-size: 14px; color: #a8c8a8; line-height: 1.7; }
-
-  /* Canvas overlay */
-  .canvas-wrap { position: relative; border-radius: 16px; overflow: hidden; border: 1px solid rgba(74,180,74,0.3); margin-bottom: 16px; background: #000; }
-  .canvas-wrap img { width: 100%; display: block; }
-  .canvas-wrap canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; padding: 0 4px; }
-  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #a8c8a8; }
-  .legend-dot { width: 16px; height: 3px; border-radius: 2px; flex-shrink: 0; }
-
-  .section-card { background: rgba(74,180,74,0.04); border: 1px solid rgba(74,180,74,0.15); border-radius: 20px; padding: 20px; margin-bottom: 16px; }
-  .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; color: #4ab44a; margin-bottom: 14px; }
-  .good-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
-  .good-icon { color: #4ab44a; font-size: 16px; flex-shrink: 0; margin-top: 2px; }
-  .good-text { font-size: 14px; color: #a8c8a8; line-height: 1.7; word-break: break-all; }
-  .improve-item { border: 1px solid rgba(74,180,74,0.15); border-radius: 14px; padding: 16px; margin-bottom: 12px; background: rgba(0,0,0,0.2); }
-  .improve-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-  .priority-badge { font-family: 'Bebas Neue', sans-serif; font-size: 13px; letter-spacing: 1px; padding: 3px 10px; border-radius: 20px; flex-shrink: 0; }
-  .priority-1 { background: rgba(255,100,100,0.2); color: #ff8080; border: 1px solid rgba(255,100,100,0.3); }
-  .priority-2 { background: rgba(255,180,50,0.15); color: #ffb832; border: 1px solid rgba(255,180,50,0.3); }
-  .priority-3 { background: rgba(74,180,74,0.15); color: #4ab44a; border: 1px solid rgba(74,180,74,0.3); }
-  .improve-title { font-size: 15px; font-weight: 700; color: #c8e8c8; word-break: break-all; }
-  .improve-desc { font-size: 14px; color: #a8c8a8; line-height: 1.7; margin-bottom: 10px; word-break: break-all; }
-  .drill-box { background: rgba(74,180,74,0.08); border-left: 3px solid #4ab44a; border-radius: 0 8px 8px 0; padding: 10px 12px; margin-bottom: 12px; }
-  .drill-label { font-size: 11px; color: #4ab44a; letter-spacing: 1px; margin-bottom: 4px; }
-  .drill-text { font-size: 13px; color: #a8c8a8; line-height: 1.6; word-break: break-all; }
-  .yt-btn { display: flex; align-items: center; gap: 8px; background: rgba(255,0,0,0.12); border: 1px solid rgba(255,0,0,0.25); color: #ff8080; border-radius: 10px; padding: 8px 14px; font-size: 13px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; text-decoration: none; width: 100%; justify-content: center; }
-  .coach-card { background: linear-gradient(135deg, rgba(74,180,74,0.08), rgba(0,100,0,0.1)); border: 1px solid rgba(74,180,74,0.25); border-radius: 20px; padding: 20px; margin-bottom: 24px; text-align: center; }
-  .coach-icon { font-size: 32px; margin-bottom: 8px; }
-  .coach-text { font-size: 15px; color: #c8e8c8; line-height: 1.8; word-break: break-all; }
-  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 10px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-</style>
-</head>
-<body>
-<header>
-  <span style="font-size:28px">⛳</span>
-  <div>
-    <div class="logo-title">SWING AI</div>
-    <div class="logo-sub">Golf Swing Analyzer</div>
-  </div>
-</header>
-<main>
-  <div id="upload-section">
-    <div class="headline">
-      <h1>あなたのスイングを<br>AIが解析します</h1>
-      <p class="subtext">動画または画像をアップロードするだけで<br>骨格・軌道を可視化してアドバイス</p>
-    </div>
-    <div class="free-badge">✨ 完全無料・登録不要・逆光でもOK</div>
-    <label class="upload-label">
-      <input type="file" id="file-input" accept="image/*,video/*">
-      <div class="drop-icon">📱</div>
-      <p class="drop-title">タップして動画・画像を選択</p>
-      <p class="drop-hint">逆光・暗い環境でも解析できます</p>
-      <span class="drop-formats">MP4 / MOV / JPG / PNG 対応</span>
-    </label>
-    <div id="preview-wrap">
-      <div id="preview-media"></div>
-      <div class="preview-info">
-        <span class="preview-name" id="preview-name"></span>
-        <button class="remove-btn" onclick="resetFile()">✕ 削除</button>
-      </div>
-    </div>
-    <div class="error-box" id="error-box"></div>
-    <button class="analyze-btn" id="analyze-btn" disabled onclick="analyze()">🏌️ スイングを解析する</button>
-    <div class="features">
-      <span class="feature-chip">🦴 骨格検出</span>
-      <span class="feature-chip">🏹 軌道描画</span>
-      <span class="feature-chip">💯 100点採点</span>
-      <span class="feature-chip">🎬 練習動画付き</span>
-    </div>
-  </div>
-
-  <div id="result-section">
-    <div class="result-header">
-      <h2 class="result-title">解析結果</h2>
-      <button class="retry-btn" onclick="resetAll()">🔄 もう一度</button>
-    </div>
-
-    <!-- Score -->
-    <div class="score-card">
-      <div class="score-number" id="score-number">--</div>
-      <div class="score-label">/ 100点</div>
-      <div class="score-bar-wrap"><div class="score-bar" id="score-bar" style="width:0%"></div></div>
-      <div class="score-comment" id="score-comment"></div>
-    </div>
-
-    <!-- Annotated image -->
-    <div class="canvas-wrap" id="canvas-wrap">
-      <img id="result-img" src="" alt="スイング">
-      <canvas id="overlay-canvas"></canvas>
-    </div>
-    <div class="legend" id="legend"></div>
-
-    <!-- Good points -->
-    <div class="section-card">
-      <div class="section-title">👍 良い点</div>
-      <div id="good-points"></div>
-    </div>
-
-    <!-- Improvements -->
-    <div class="section-card">
-      <div class="section-title">🎯 改善ポイント</div>
-      <div id="improvements"></div>
-    </div>
-
-    <!-- Coach -->
-    <div class="coach-card">
-      <div class="coach-icon">🏌️</div>
-      <div class="coach-text" id="coach-message"></div>
-    </div>
-
-    <button class="analyze-btn" onclick="resetAll()">🏌️ 別のスイングを解析</button>
-  </div>
-</main>
-
-<script>
-let currentFile = null;
-let previewObjectUrl = null;
-let capturedFrameUrl = null;
-
-document.getElementById('file-input').addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (file) handleFile(file);
-});
-
-function handleFile(file) {
-  const isImage = file.type.startsWith('image/');
-  const isVideo = file.type.startsWith('video/');
-  if (!isImage && !isVideo) { showError('画像または動画ファイルを選択してください'); return; }
-  currentFile = file;
-  hideError();
-  if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
-  previewObjectUrl = URL.createObjectURL(file);
-  const mediaDiv = document.getElementById('preview-media');
-  mediaDiv.innerHTML = isVideo
-    ? `<video src="${previewObjectUrl}" controls playsinline style="width:100%;max-height:320px;object-fit:cover;display:block"></video>`
-    : `<img src="${previewObjectUrl}" alt="スイング" style="width:100%;max-height:320px;object-fit:cover;display:block">`;
-  document.getElementById('preview-name').textContent = file.name;
-  document.getElementById('preview-wrap').style.display = 'block';
-  document.getElementById('analyze-btn').disabled = false;
-}
-
-function resetFile() {
-  currentFile = null;
-  capturedFrameUrl = null;
-  if (previewObjectUrl) { URL.revokeObjectURL(previewObjectUrl); previewObjectUrl = null; }
-  document.getElementById('preview-wrap').style.display = 'none';
-  document.getElementById('preview-media').innerHTML = '';
-  document.getElementById('file-input').value = '';
-  document.getElementById('analyze-btn').disabled = true;
-  hideError();
-}
-
-function resetAll() {
-  resetFile();
-  document.getElementById('upload-section').style.display = 'block';
-  document.getElementById('result-section').style.display = 'none';
-}
-
-async function analyze() {
-  if (!currentFile) return;
-  const btn = document.getElementById('analyze-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>AIが解析中...';
-  hideError();
-
-  let fileToSend = currentFile;
-  capturedFrameUrl = previewObjectUrl;
-
-  if (currentFile.type.startsWith('video/')) {
-    try {
-      const { file: frameFile, url: frameUrl } = await extractVideoFrame(currentFile);
-      fileToSend = frameFile;
-      capturedFrameUrl = frameUrl;
-    } catch(e) {}
-  }
-
-  const formData = new FormData();
-  formData.append('file', fileToSend);
-
-  try {
-    const res = await fetch('/api/analyze', { method: 'POST', body: formData });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || '解析に失敗しました');
-
-    document.getElementById('upload-section').style.display = 'none';
-    document.getElementById('result-section').style.display = 'block';
-    renderResult(data.result);
-  } catch (err) {
-    showError(err.message);
-    btn.disabled = false;
-    btn.innerHTML = '🏌️ スイングを解析する';
-  }
-}
-
-function renderResult(r) {
-  // Score
-  const score = r.score || 0;
-  document.getElementById('score-number').textContent = score;
-  document.getElementById('score-comment').textContent = r.score_comment || '';
-  setTimeout(() => { document.getElementById('score-bar').style.width = score + '%'; }, 100);
-
-  // Annotated image
-  const img = document.getElementById('result-img');
-  img.src = capturedFrameUrl || '';
-  img.onload = () => drawAnnotations(r.pose, r.annotations);
-
-  // Good points
-  document.getElementById('good-points').innerHTML = (r.good_points || []).map(g =>
-    `<div class="good-item"><span class="good-icon">✓</span><span class="good-text">${g}</span></div>`
-  ).join('');
-
-  // Improvements
-  const priorityLabels = ['最優先', '次に重要', '余裕があれば'];
-  document.getElementById('improvements').innerHTML = (r.improvements || []).map((imp, i) => {
-    const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(imp.youtube_search || 'golf swing drill')}`;
-    return `
-      <div class="improve-item">
-        <div class="improve-header">
-          <span class="priority-badge priority-${imp.priority || i+1}">${priorityLabels[i] || '改善点'}</span>
-          <span class="improve-title">${imp.title || ''}</span>
-        </div>
-        <div class="improve-desc">${imp.description || ''}</div>
-        <div class="drill-box">
-          <div class="drill-label">📌 練習ドリル</div>
-          <div class="drill-text">${imp.drill || ''}</div>
-        </div>
-        <a class="yt-btn" href="${ytUrl}" target="_blank" rel="noopener">▶ YouTubeで練習動画を見る</a>
-      </div>`;
-  }).join('');
-
-  // Coach
-  document.getElementById('coach-message').textContent = r.coach_message || '';
-}
-
-function drawAnnotations(pose, annotations) {
-  const img = document.getElementById('result-img');
-  const canvas = document.getElementById('overlay-canvas');
-  const wrap = document.getElementById('canvas-wrap');
-
-  const W = img.naturalWidth || img.width;
-  const H = img.naturalHeight || img.height;
-  const dispW = img.offsetWidth;
-  const dispH = img.offsetHeight;
-
-  canvas.width = dispW;
-  canvas.height = dispH;
-
-  const sx = dispW / 1000;
-  const sy = dispH / 1000;
-
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, dispW, dispH);
-
-  if (!pose) return;
-
-  // 座標をCanvas内に収める関数
-  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
-  function px(pt) {
-    return { x: clamp(pt.x * sx, 0, dispW), y: clamp(pt.y * sy, 0, dispH) };
-  }
-
-  // 骨格の接続定義
-  const skeleton = [
-    ['head', 'left_shoulder'], ['head', 'right_shoulder'],
-    ['left_shoulder', 'right_shoulder'],
-    ['left_shoulder', 'left_hip'], ['right_shoulder', 'right_hip'],
-    ['left_hip', 'right_hip'],
-    ['left_hip', 'left_knee'], ['right_hip', 'right_knee'],
-    ['left_knee', 'left_foot'], ['right_knee', 'right_foot'],
-    ['left_hand', 'left_shoulder'], ['right_hand', 'right_shoulder'],
-    ['club_grip', 'club_head']
-  ];
-
-  // 骨格を描画
-  ctx.lineWidth = 2.5;
-  ctx.setLineDash([]);
-  skeleton.forEach(([a, b]) => {
-    const pa = pose[a], pb = pose[b];
-    if (!pa || !pb) return;
-    const isClub = a === 'club_grip' || b === 'club_head';
-    ctx.strokeStyle = isClub ? '#ff4444' : 'rgba(0,255,136,0.7)';
-    ctx.lineWidth = isClub ? 3 : 2;
-    ctx.beginPath();
-    const ppa = px(pa), ppb = px(pb);
-    ctx.moveTo(ppa.x, ppa.y);
-    ctx.lineTo(ppb.x, ppb.y);
-    ctx.stroke();
-  });
-
-  // アノテーションライン
-  if (annotations) {
-    annotations.forEach(ann => {
-      if (ann.type === 'line' && pose[ann.from] && pose[ann.to]) {
-        const pa = px(pose[ann.from]), pb = px(pose[ann.to]);
-        ctx.strokeStyle = ann.color || '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([6, 4]);
-        ctx.beginPath();
-        ctx.moveTo(pa.x, pa.y);
-        ctx.lineTo(pb.x, pb.y);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // ラベル
-        if (ann.label) {
-          const mx = (pa.x + pb.x) / 2;
-          const my = (pa.y + pb.y) / 2;
-          ctx.font = 'bold 11px Noto Sans JP, sans-serif';
-          ctx.fillStyle = ann.color || '#ffffff';
-          ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-          ctx.lineWidth = 3;
-          ctx.strokeText(ann.label, mx + 4, my - 4);
-          ctx.fillText(ann.label, mx + 4, my - 4);
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <title>SWING AI - ゴルフスイング解析</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'swing-dark': '#0f1729',
+            'swing-darker': '#080d1a',
+            'swing-card': '#1a2340',
+            'swing-border': '#2a3a5c',
+            'swing-green': '#22c55e',
+            'swing-green-dark': '#16a34a',
+            'swing-accent': '#4ade80',
+          },
+          fontFamily: {
+            display: ['Noto Sans JP', 'sans-serif'],
+          }
         }
       }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background: #0f1729;
+      color: #e2e8f0;
+      margin: 0;
+      min-height: 100vh;
+    }
+    .upload-zone {
+      border: 2px dashed #2a3a5c;
+      transition: all 0.3s ease;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: #22c55e;
+      background: rgba(34, 197, 94, 0.05);
+    }
+    .btn-analyze {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      transition: all 0.2s ease;
+    }
+    .btn-analyze:hover:not(:disabled) {
+      transform: scale(0.98);
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+    }
+    .btn-analyze:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .progress-bar {
+      background: linear-gradient(90deg, #22c55e, #4ade80);
+      transition: width 0.5s ease;
+    }
+    .score-circle {
+      background: conic-gradient(
+        #22c55e calc(var(--score) * 1%),
+        #1a2340 0
+      );
+    }
+    .fade-in {
+      animation: fadeIn 0.5s ease forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .pulse-loading {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    /* スクロールバー */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f1729; }
+    ::-webkit-scrollbar-thumb { background: #2a3a5c; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div id="app" class="min-h-screen flex flex-col">
+    <!-- ヘッダー -->
+    <header class="px-4 py-3 flex items-center gap-2 border-b border-swing-border/30">
+      <span class="text-2xl">⛳</span>
+      <div>
+        <h1 class="text-lg font-bold text-white leading-tight">SWING AI</h1>
+        <p class="text-xs text-gray-400">Golf Swing Analyzer</p>
+      </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="flex-1 flex flex-col items-center px-4 py-8 max-w-2xl mx-auto w-full">
+      
+      <!-- ヒーローセクション -->
+      <section id="hero-section" class="text-center mb-8">
+        <h2 class="text-3xl md:text-4xl font-black text-white leading-tight mb-1">
+          あなたのスイングを<br/>
+          <span class="text-swing-green">AIが解析します</span>
+        </h2>
+        <p class="text-gray-400 text-sm mt-3">
+          動画または画像をアップロードするだけで<br/>
+          骨格・軌道を可視化してアドバイス
+        </p>
+        <p class="text-swing-accent text-xs mt-2 font-medium">
+          ✨ 完全無料・登録不要・逆光でもOK
+        </p>
+      </section>
+
+      <!-- アップロードゾーン -->
+      <section id="upload-section" class="w-full mb-4">
+        <label id="upload-zone" class="upload-zone block rounded-xl p-8 text-center cursor-pointer">
+          <input type="file" id="file-input" accept="video/mp4,video/quicktime,image/jpeg,image/png" class="hidden" />
+          <div id="upload-placeholder">
+            <svg class="mx-auto mb-3 w-10 h-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+            <p class="text-gray-300 font-medium text-sm">タップして動画・画像を選択</p>
+            <p class="text-gray-500 text-xs mt-1">逆光・暗い環境でも解析できます</p>
+            <span class="inline-block mt-3 px-3 py-1 rounded-full border border-swing-border text-xs text-gray-400">
+              MP4 / MOV / JPG / PNG 対応
+            </span>
+          </div>
+        </label>
+      </section>
+
+      <!-- ファイルプレビュー -->
+      <section id="preview-section" class="w-full mb-4 hidden">
+        <div class="bg-swing-card rounded-xl overflow-hidden border border-swing-border">
+          <div id="video-preview-container" class="hidden">
+            <video id="video-preview" class="w-full max-h-64 object-contain bg-black" controls></video>
+          </div>
+          <div id="image-preview-container" class="hidden">
+            <img id="image-preview" class="w-full max-h-64 object-contain bg-black" />
+          </div>
+          <div class="flex items-center justify-between px-4 py-2 border-t border-swing-border/50">
+            <span id="file-name" class="text-sm text-gray-300 truncate"></span>
+            <button id="remove-btn" class="text-red-400 hover:text-red-300 text-xs font-medium px-2 py-1 rounded hover:bg-red-400/10 transition">
+              ✕ 削除
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 解析ボタン -->
+      <button id="analyze-btn" class="btn-analyze w-full py-4 rounded-xl text-white font-bold text-base disabled:opacity-50" disabled>
+        🏌️ スイングを解析する
+      </button>
+
+      <!-- プログレスバー -->
+      <section id="progress-section" class="w-full mt-4 hidden">
+        <div class="bg-swing-card rounded-xl p-4 border border-swing-border">
+          <div class="flex items-center justify-between mb-2">
+            <span id="progress-text" class="text-sm text-gray-300 pulse-loading">解析中...</span>
+            <span id="progress-percent" class="text-sm text-swing-green font-medium">0%</span>
+          </div>
+          <div class="w-full h-2 bg-swing-darker rounded-full overflow-hidden">
+            <div id="progress-bar" class="progress-bar h-full rounded-full" style="width: 0%"></div>
+          </div>
+          <p class="text-xs text-gray-500 mt-2">AIがスイングを分析しています。しばらくお待ちください...</p>
+        </div>
+      </section>
+
+      <!-- 解析結果 -->
+      <section id="result-section" class="w-full mt-6 hidden">
+        
+        <!-- 解析済み動画 -->
+        <div id="analyzed-video-section" class="mb-6 hidden fade-in">
+          <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+            <span class="text-swing-green">🎬</span> 解析済み動画
+          </h3>
+          <div class="bg-swing-card rounded-xl overflow-hidden border border-swing-border">
+            <video id="analyzed-video" class="w-full" controls></video>
+          </div>
+        </div>
+
+        <!-- スコア -->
+        <div id="score-section" class="mb-6 fade-in">
+          <div class="bg-swing-card rounded-xl p-6 border border-swing-border text-center">
+            <h3 class="text-lg font-bold text-white mb-4">スイングスコア</h3>
+            <div class="relative w-32 h-32 mx-auto mb-4">
+              <div class="score-circle w-full h-full rounded-full flex items-center justify-center" style="--score: 0">
+                <div class="w-24 h-24 bg-swing-dark rounded-full flex items-center justify-center">
+                  <span id="score-value" class="text-3xl font-black text-white">--</span>
+                </div>
+              </div>
+            </div>
+            <p id="score-label" class="text-gray-400 text-sm">解析結果を待っています</p>
+          </div>
+        </div>
+
+        <!-- サマリー -->
+        <div id="summary-section" class="mb-6 hidden fade-in">
+          <div class="bg-swing-card rounded-xl p-5 border border-swing-border">
+            <h3 class="text-base font-bold text-white mb-2 flex items-center gap-2">
+              <span>📋</span> 総合評価
+            </h3>
+            <p id="summary-text" class="text-gray-300 text-sm leading-relaxed"></p>
+          </div>
+        </div>
+
+        <!-- 良い点 -->
+        <div id="good-points-section" class="mb-6 hidden fade-in">
+          <div class="bg-swing-card rounded-xl p-5 border border-swing-border">
+            <h3 class="text-base font-bold text-white mb-3 flex items-center gap-2">
+              <span class="text-swing-green">✅</span> 良い点
+            </h3>
+            <ul id="good-points-list" class="space-y-2"></ul>
+          </div>
+        </div>
+
+        <!-- 改善点 -->
+        <div id="improvements-section" class="mb-6 hidden fade-in">
+          <div class="bg-swing-card rounded-xl p-5 border border-swing-border">
+            <h3 class="text-base font-bold text-white mb-3 flex items-center gap-2">
+              <span class="text-yellow-400">⚡</span> 改善ポイント
+            </h3>
+            <ul id="improvements-list" class="space-y-2"></ul>
+          </div>
+        </div>
+
+        <!-- もう一度解析ボタン -->
+        <button id="retry-btn" class="w-full py-3 rounded-xl border border-swing-border text-gray-300 font-medium text-sm hover:bg-swing-card transition mt-4 hidden">
+          🔄 別の動画を解析する
+        </button>
+      </section>
+
+      <!-- フィーチャーバッジ -->
+      <section class="flex flex-wrap justify-center gap-2 mt-8">
+        <span class="px-3 py-1.5 rounded-full bg-swing-card border border-swing-border text-xs text-gray-400">🦴 骨格検出</span>
+        <span class="px-3 py-1.5 rounded-full bg-swing-card border border-swing-border text-xs text-gray-400">🏹 軌道描画</span>
+        <span class="px-3 py-1.5 rounded-full bg-swing-card border border-swing-border text-xs text-gray-400">💯 100点採点</span>
+        <span class="px-3 py-1.5 rounded-full bg-swing-card border border-swing-border text-xs text-gray-400">🎬 練習動画付き</span>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // DOM要素
+    const fileInput = document.getElementById('file-input');
+    const uploadZone = document.getElementById('upload-zone');
+    const uploadPlaceholder = document.getElementById('upload-placeholder');
+    const previewSection = document.getElementById('preview-section');
+    const videoPreviewContainer = document.getElementById('video-preview-container');
+    const videoPreview = document.getElementById('video-preview');
+    const imagePreviewContainer = document.getElementById('image-preview-container');
+    const imagePreview = document.getElementById('image-preview');
+    const fileName = document.getElementById('file-name');
+    const removeBtn = document.getElementById('remove-btn');
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const progressSection = document.getElementById('progress-section');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const progressPercent = document.getElementById('progress-percent');
+    const resultSection = document.getElementById('result-section');
+    const analyzedVideoSection = document.getElementById('analyzed-video-section');
+    const analyzedVideo = document.getElementById('analyzed-video');
+    const scoreValue = document.getElementById('score-value');
+    const scoreLabel = document.getElementById('score-label');
+    const summarySection = document.getElementById('summary-section');
+    const summaryText = document.getElementById('summary-text');
+    const goodPointsSection = document.getElementById('good-points-section');
+    const goodPointsList = document.getElementById('good-points-list');
+    const improvementsSection = document.getElementById('improvements-section');
+    const improvementsList = document.getElementById('improvements-list');
+    const retryBtn = document.getElementById('retry-btn');
+    const scoreSection = document.getElementById('score-section');
+
+    let selectedFile = null;
+
+    // ドラッグ&ドロップ
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('drag-over');
     });
-  }
-
-  // 関節点を描画
-  Object.entries(pose).forEach(([key, pt]) => {
-    if (!pt) return;
-    const isClub = key.includes('club');
-    const r = isClub ? 6 : 5;
-    const color = isClub ? '#ff4444' : '#00ff88';
-    ctx.beginPath();
-    const ppt = px(pt); ctx.arc(ppt.x, ppt.y, r, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  });
-
-  // 凡例
-  const legendEl = document.getElementById('legend');
-  legendEl.innerHTML = `
-    <div class="legend-item"><div class="legend-dot" style="background:#00ff88"></div>骨格ライン</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ff4444"></div>クラブ軌道</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#00ff88;border-radius:50%;width:8px;height:8px"></div>関節点</div>
-  `;
-  if (annotations) {
-    annotations.forEach(ann => {
-      legendEl.innerHTML += `<div class="legend-item"><div class="legend-dot" style="background:${ann.color};border-top:2px dashed ${ann.color};background:transparent"></div>${ann.label}</div>`;
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('drag-over');
     });
-  }
-}
-
-function extractVideoFrame(videoFile) {
-  return new Promise((resolve, reject) => {
-    const video = document.createElement('video');
-    const url = URL.createObjectURL(videoFile);
-    video.src = url; video.muted = true;
-    video.addEventListener('loadeddata', () => { video.currentTime = Math.min(1.5, video.duration * 0.3); });
-    video.addEventListener('seeked', () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth || 640; canvas.height = video.videoHeight || 360;
-      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(url);
-      const frameUrl = canvas.toDataURL('image/jpeg', 0.9);
-      canvas.toBlob(blob => {
-        resolve({ file: new File([blob], 'frame.jpg', { type: 'image/jpeg' }), url: frameUrl });
-      }, 'image/jpeg', 0.9);
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('drag-over');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFile(files[0]);
+      }
     });
-    video.addEventListener('error', () => { URL.revokeObjectURL(url); reject(); });
-    video.load();
-  });
-}
 
-function showError(msg) { const el = document.getElementById('error-box'); el.textContent = '⚠️ ' + msg; el.style.display = 'block'; }
-function hideError() { document.getElementById('error-box').style.display = 'none'; }
-</script>
+    // ファイル選択
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    // ファイル処理
+    function handleFile(file) {
+      const allowedTypes = ['video/mp4', 'video/quicktime', 'image/jpeg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('対応していないファイル形式です。MP4, MOV, JPG, PNG のいずれかを選択してください。');
+        return;
+      }
+      if (file.size > 50 * 1024 * 1024) {
+        alert('ファイルサイズが大きすぎます（最大50MB）');
+        return;
+      }
+
+      selectedFile = file;
+      fileName.textContent = file.name;
+      previewSection.classList.remove('hidden');
+      analyzeBtn.disabled = false;
+
+      // プレビュー表示
+      if (file.type.startsWith('video/')) {
+        videoPreviewContainer.classList.remove('hidden');
+        imagePreviewContainer.classList.add('hidden');
+        videoPreview.src = URL.createObjectURL(file);
+      } else {
+        imagePreviewContainer.classList.remove('hidden');
+        videoPreviewContainer.classList.add('hidden');
+        imagePreview.src = URL.createObjectURL(file);
+      }
+
+      // 結果セクションを非表示
+      resultSection.classList.add('hidden');
+    }
+
+    // ファイル削除
+    removeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      resetUpload();
+    });
+
+    function resetUpload() {
+      selectedFile = null;
+      fileInput.value = '';
+      previewSection.classList.add('hidden');
+      videoPreviewContainer.classList.add('hidden');
+      imagePreviewContainer.classList.add('hidden');
+      analyzeBtn.disabled = true;
+      resultSection.classList.add('hidden');
+      progressSection.classList.add('hidden');
+    }
+
+    // 解析実行
+    analyzeBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      // UI更新
+      analyzeBtn.disabled = true;
+      analyzeBtn.textContent = '⏳ 解析中...';
+      progressSection.classList.remove('hidden');
+      resultSection.classList.add('hidden');
+
+      // プログレスアニメーション
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += Math.random() * 8;
+        if (progress > 90) progress = 90;
+        updateProgress(progress, '解析中...');
+      }, 500);
+
+      try {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          body: formData,
+        });
+
+        clearInterval(progressInterval);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `サーバーエラー (${response.status})`);
+        }
+
+        updateProgress(100, '完了！');
+
+        const data = await response.json();
+        console.log('Response:', data);
+
+        // 結果表示
+        setTimeout(() => {
+          progressSection.classList.add('hidden');
+          displayResults(data);
+        }, 500);
+
+      } catch (error) {
+        clearInterval(progressInterval);
+        progressSection.classList.add('hidden');
+        alert('⚠️ ' + (error.message || 'エラーが発生しました'));
+        console.error('Analysis error:', error);
+      } finally {
+        analyzeBtn.disabled = false;
+        analyzeBtn.textContent = '🏌️ スイングを解析する';
+      }
+    });
+
+    function updateProgress(percent, text) {
+      progressBar.style.width = percent + '%';
+      progressPercent.textContent = Math.round(percent) + '%';
+      if (text) progressText.textContent = text;
+    }
+
+    // 結果表示
+    function displayResults(data) {
+      resultSection.classList.remove('hidden');
+
+      // レスポンス形式に対応（result ラッパーがある場合とない場合）
+      const result = data.result || data;
+      const analysis = result.analysis || {};
+
+      // スコア
+      const score = analysis.score || 0;
+      scoreValue.textContent = score;
+      scoreSection.classList.remove('hidden');
+      
+      // スコアサークルのアニメーション
+      const scoreCircle = document.querySelector('.score-circle');
+      scoreCircle.style.setProperty('--score', score);
+
+      // スコアラベル
+      if (score >= 80) {
+        scoreLabel.textContent = '素晴らしいスイングです！';
+        scoreLabel.className = 'text-swing-green text-sm font-medium';
+      } else if (score >= 60) {
+        scoreLabel.textContent = '良いスイングですが、改善の余地があります';
+        scoreLabel.className = 'text-yellow-400 text-sm font-medium';
+      } else {
+        scoreLabel.textContent = '基礎から見直しましょう';
+        scoreLabel.className = 'text-orange-400 text-sm font-medium';
+      }
+
+      // サマリー
+      if (analysis.summary) {
+        summarySection.classList.remove('hidden');
+        summaryText.textContent = analysis.summary;
+      }
+
+      // 良い点
+      const goodPoints = analysis.good_points || [];
+      if (goodPoints.length > 0) {
+        goodPointsSection.classList.remove('hidden');
+        goodPointsList.innerHTML = goodPoints.map(point => 
+          `<li class="flex items-start gap-2 text-sm text-gray-300">
+            <span class="text-swing-green mt-0.5 flex-shrink-0">●</span>
+            <span>${escapeHtml(point)}</span>
+          </li>`
+        ).join('');
+      }
+
+      // 改善点
+      const improvements = analysis.improvements || [];
+      if (improvements.length > 0) {
+        improvementsSection.classList.remove('hidden');
+        improvementsList.innerHTML = improvements.map(point => 
+          `<li class="flex items-start gap-2 text-sm text-gray-300">
+            <span class="text-yellow-400 mt-0.5 flex-shrink-0">▶</span>
+            <span>${escapeHtml(point)}</span>
+          </li>`
+        ).join('');
+      }
+
+      // 解析済み動画
+      const videoUrl = result.video_url;
+      if (videoUrl) {
+        analyzedVideoSection.classList.remove('hidden');
+        analyzedVideo.src = videoUrl;
+      }
+
+      // もう一度ボタン
+      retryBtn.classList.remove('hidden');
+    }
+
+    // もう一度解析
+    retryBtn.addEventListener('click', () => {
+      resetUpload();
+      retryBtn.classList.add('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // XSS対策
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
 </body>
 </html>
