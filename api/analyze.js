@@ -10,17 +10,14 @@ export const config = { api: { bodyParser: false } };
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 動画用にサイズを拡大
 
-// CORS ヘッダーを設定する関数
-function setCorsHeaders(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Max-Age', '86400');
-}
-
 export default async function handler(req, res) {
   // CORS ヘッダーを設定
-  setCorsHeaders(res);
+  const origin = req.headers.origin || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   // OPTIONS リクエストに応答
   if (req.method === 'OPTIONS') {
@@ -35,6 +32,7 @@ export default async function handler(req, res) {
 
   form.parse(req, async (err, fields, files) => {
     if (err) {
+      console.error('Form parse error:', err);
       return res.status(400).json({ error: 'ファイルの読み込みに失敗しました' });
     }
 
@@ -62,9 +60,12 @@ export default async function handler(req, res) {
     const analysisReportPath = path.join(publicVideosDir, `${uniqueName}_report.json`);
 
     try {
+      console.log(`Processing video: ${inputPath}`);
+      
       // Pythonスクリプトを呼び出して解析と動画生成を行う
       const command = `python3 /home/ubuntu/golf_analyzer.py "${inputPath}"`;
       
+      console.log(`Executing: ${command}`);
       const { stdout, stderr } = await execPromise(command);
       
       if (stderr) {
@@ -74,14 +75,23 @@ export default async function handler(req, res) {
       console.log(`Python stdout: ${stdout}`);
       
       // 解析結果の読み込み
+      if (!fs.existsSync('analysis_report.json')) {
+        throw new Error('analysis_report.json not found');
+      }
+      
       const analysisData = JSON.parse(
         fs.readFileSync('analysis_report.json', 'utf8')
       );
+      
+      console.log('Analysis data:', JSON.stringify(analysisData, null, 2));
       
       // 生成された analyzed_swing.mp4 を /public/videos/ に移動
       const tempVideoPath = 'analyzed_swing.mp4';
       if (fs.existsSync(tempVideoPath)) {
         fs.renameSync(tempVideoPath, outputPath);
+        console.log(`Video moved to: ${outputPath}`);
+      } else {
+        console.warn(`Video file not found at: ${tempVideoPath}`);
       }
       
       // 解析レポートも保存
@@ -95,7 +105,7 @@ export default async function handler(req, res) {
       // 注意: Vercel の環境では、public ディレクトリのファイルは自動的に静的ファイルとして提供されます
       const videoUrl = `/videos/${uniqueName}.mp4`;
       
-      res.json({
+      const responseData = {
         result: {
           message: '分析が完了しました。',
           analysis: analysisData.analysis,
@@ -103,10 +113,15 @@ export default async function handler(req, res) {
           video_url: videoUrl,
           video_ready: true
         }
-      });
+      };
+      
+      console.log('Sending response:', JSON.stringify(responseData, null, 2));
+      
+      res.status(200).json(responseData);
       
     } catch (error) {
       console.error(`Error: ${error}`);
+      console.error(`Error stack: ${error.stack}`);
       return res.status(500).json({ 
         error: '解析中にエラーが発生しました',
         details: error.message 
