@@ -10,7 +10,23 @@ export const config = { api: { bodyParser: false } };
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 動画用にサイズを拡大
 
+// CORS ヘッダーを設定する関数
+function setCorsHeaders(res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Max-Age', '86400');
+}
+
 export default async function handler(req, res) {
+  // CORS ヘッダーを設定
+  setCorsHeaders(res);
+
+  // OPTIONS リクエストに応答
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
